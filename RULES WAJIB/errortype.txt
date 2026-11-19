@@ -1,0 +1,134 @@
+Ekstensif: Daftar Kesalahan AI dalam Pengembangan React & Node.js
+
+Dokumen ini berisi daftar komprehensif kesalahan, halusinasi, dan bad practices yang sering dilakukan oleh AI saat melakukan generate kode. Wajib digunakan sebagai acuan untuk membuat system rules pada metode Vibe Coding.
+
+TIER 1: Paling Sering Terjadi & Sangat Fatal (Aplikasi Crash / Freeze)
+
+1. Silent Regression & Context Loss (Penghapusan Diam-diam)
+
+Kasus: AI disuruh mengedit fitur A, tapi menghapus event listener, props, atau logika state milik fitur B yang ada di file yang sama untuk menghemat batas token output.
+
+Dampak: Fitur lain mati tanpa error kompilasi.
+
+2. Kekacauan useEffect & Infinite Loops (React)
+
+Kasus A (Infinite Render): Mengosongkan dependency array padahal menggunakan variabel state di dalamnya, ATAU memasukkan tipe referensi (Object/Array/Function) tanpa useMemo/useCallback.
+
+Kasus B (DDoS ke Server Sendiri): AI meletakkan pemanggilan API fetch() langsung di dalam body komponen (bukan di dalam useEffect). Setiap kali komponen render, API dipanggil, membuat server backend mati karena request membludak.
+
+3. Stale Closures pada Async & Callbacks (React)
+
+Kasus: AI membuat fungsi asinkron (seperti setTimeout atau pemanggilan API) yang merujuk pada variabel state. Saat fungsi itu selesai, ia menggunakan nilai state versi lama (basi), bukan nilai yang terbaru.
+
+Dampak: Data yang disimpan ke database salah atau UI menampilkan data usang.
+
+4. Mengabaikan "Happy Path" & Unhandled Promises (Node.js & React)
+
+Kasus: Tidak memakai try/catch pada operasi async/await. Langsung me-render user.profile.address.city tanpa Optional Chaining (user?.profile?.address?.city).
+
+Dampak: Unhandled Promise Rejection (mematikan server Node.js) atau White Screen of Death di React.
+
+5. Lupa Mencegah Default Behavior (React)
+
+Kasus: AI membuat form submit (onSubmit), tapi lupa menaruh e.preventDefault().
+
+Dampak: Saat tombol submit diklik, seluruh halaman web reload (refresh) dan semua state aplikasi hilang seketika.
+
+TIER 2: Masalah Arsitektur, Database & TDD (Bom Waktu Performa)
+
+6. Masalah "N+1 Query" (Node.js / Database)
+
+Kasus: Saat meminta data daftar User berserta Postingan-nya, AI melakukan query ke database di dalam loop map atau for.
+
+Dampak: Jika ada 100 user, AI akan melakukan 101 query ke database. Sangat lambat dan mematikan performa database. Harus dipaksa menggunakan JOIN, populate() (Mongoose), atau agregasi.
+
+7. Mengabaikan Pagination / Limit (Node.js)
+
+Kasus: AI membuat endpoint GET /users dengan kode return db.users.find().
+
+Dampak: Berjalan lancar saat data baru 10. Begitu data mencapai 10.000, server kehabisan memori (Out of Memory) dan merespons dengan sangat lambat.
+
+8. Node.js: "Cannot set headers after they are sent"
+
+Kasus: Lupa menaruh return setelah merespons klien (res.status(400).json(...)).
+
+Dampak: Kode terus berlanjut ke bawah, mencoba mengirim respons kedua kalinya, memicu error internal Express/Node.js.
+
+9. Pengelabuan TDD & Flaky Tests
+
+Kasus A (Hardcoding): AI menulis return 10 agar lulus test, bukannya membuat algoritma kalkulasi.
+
+Kasus B (Flaky Timer): AI menggunakan setTimeout asli di dalam unit test bukannya me-mocking timer (seperti jest.useFakeTimers()). Test kadang lulus, kadang gagal tergantung kecepatan prosesor.
+
+10. Prop Drilling Ekstrem (React)
+
+Kasus: AI mengoper props data dari komponen Induk turun melewati 5 lapis komponen anak yang sebenarnya tidak membutuhkan data tersebut.
+
+Dampak: Kode sangat kotor, sulit di-maintain, dan memicu re-render yang tidak perlu pada komponen perantara.
+
+11. Type Bypassing di TypeScript
+
+Kasus: AI memakai jalan pintas: any, as unknown as, atau @ts-ignore saat kebingungan.
+
+Dampak: Menghancurkan type safety.
+
+TIER 3: Bug Visual & Logika Tersembunyi (Frontend)
+
+12. Bug Rendering Angka Nol (React Conditional Rendering)
+
+Kasus: AI menggunakan logical AND untuk render: {data.length && <List />}.
+
+Dampak: Jika data.length adalah 0 (angka), React TIDAK merender falsy, melainkan mencetak angka "0" secara literal di layar web. Seharusnya AI menulis {data.length > 0 && <List />}.
+
+13. Index sebagai Key pada List React
+
+Kasus: <li key={index}> pada operasi .map().
+
+Dampak: Mengacaukan internal React. Jika item dihapus atau digeser, elemen UI akan bertukar data secara aneh.
+
+14. "God Component" (Malas Memecah Komponen)
+
+Kasus: Jika tidak dipaksa, AI cenderung menulis 1000 baris kode UI, logic, dan API call ke dalam satu file App.jsx atau index.tsx.
+
+Dampak: Sulit dibaca, sulit di-TDD, dan menyulitkan AI sendiri saat disuruh mengedit ulang (karena kepenuhan konteks).
+
+15. Z-Index dan Stacking Context Chaos (Tailwind/CSS)
+
+Kasus: AI memberikan z-[9999] dan position: absolute secara sembarangan.
+
+Dampak: Tombol atau link tiba-tiba tidak bisa diklik karena tertutup oleh lapisan div tak terlihat dari komponen lain.
+
+16. Memori Leak (Lupa Cleanup)
+
+Kasus: Menambahkan event listener (window.addEventListener) atau interval di dalam useEffect, tapi tidak mengembalikan fungsi return () => { window.removeEventListener(...) }.
+
+TIER 4: Keamanan & Konfigurasi Lingkungan (Paling Bahaya jika Lolos)
+
+17. Hardcoding Rahasia (Security)
+
+Kasus: AI memasukkan API Key, JWT Secret, atau Password Database langsung ke dalam kode beralasan "untuk mempermudah", bukan memanggilnya dari process.env.
+
+18. Konfigurasi CORS Berbahaya (Node.js)
+
+Kasus: Saat mengalami error koneksi dari frontend ke backend, AI memberikan solusi app.use(cors({ origin: '*' })).
+
+Dampak: Membuka API untuk diakses oleh siapa saja dari domain mana saja (celah keamanan fatal).
+
+19. Race Conditions pada Database (Backend)
+
+Kasus: Saat membuat sistem like atau view counter, AI mengambil data, menambahkannya, lalu menyimpannya.
+const views = db.getViews(); db.saveViews(views + 1);
+
+Dampak: Jika 10 orang mengeklik secara bersamaan dalam milidetik yang sama, angkanya hanya bertambah 1, bukan 10. (AI seharusnya disuruh menggunakan atomic operators seperti $inc di MongoDB).
+
+20. Token JWT di LocalStorage
+
+Kasus: AI menyarankan menyimpan JWT untuk otentikasi ke dalam localStorage tanpa peringatan.
+
+Dampak: Sangat rentan terhadap serangan XSS (Cross-Site Scripting). AI seharusnya diarahkan untuk menggunakan HttpOnly Cookies.
+
+21. Memblokir Event Loop (Node.js)
+
+Kasus: Memakai metode sinkronus seperti fs.readFileSync atau bcrypt.hashSync (bukan versi async) di dalam rute API.
+
+Dampak: Seluruh server Node.js freeze dan tidak bisa melayani user lain sampai proses tersebut selesai.

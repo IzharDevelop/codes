@@ -1,0 +1,100 @@
+Panduan Vibe Coding: Solusi & System Rules Pencegah Error AI
+
+Dokumen ini berisi kumpulan instruksi sistem (System Prompts) dan strategi TDD yang dirancang khusus untuk metode Vibe Coding. Gunakan aturan ini untuk "mengikat" AI agar tidak melakukan kesalahan fatal di React & Node.js.
+
+BAGIAN 1: System Rules Wajib (Copy-Paste ke Prompt AI)
+
+Masukkan aturan-aturan ini ke dalam system prompt atau custom instructions AI sebelum mulai coding.
+
+1. Aturan Anti-Regresi & Context Loss (Paling Penting!)
+
+SYSTEM RULE: DILARANG KERAS melakukan Silent Regression. Saat diminta memperbaiki atau menambahkan fitur, JANGAN PERNAH menghapus, memodifikasi, atau menghilangkan event listener, props, atau logic dari fitur lain yang tidak disebutkan dalam prompt. Jaga keutuhan kode yang sudah ada. Jika kode terlalu panjang, berikan output berupa instruksi modifikasi secara spesifik, bukan menulis ulang seluruh file tapi memotong isinya.
+
+2. Aturan Ketat React (Mencegah Infinite Loop & Bug UI)
+
+SYSTEM RULE - REACT:
+
+DILARANG menaruh pemanggilan API langsung di dalam body komponen. Wajib gunakan custom hooks, React Query/SWR, atau useEffect dengan dependency array yang tepat.
+
+Wajib gunakan operator > untuk mengecek panjang array sebelum render kondisional (Tulis data.length > 0 && <UI/>, BUKAN data.length && <UI/>).
+
+Jangan pernah gunakan index sebagai key pada map() kecuali list statis yang tidak akan pernah berubah. Gunakan id unik.
+
+Saat meng-update state array/object, WAJIB buat salinan baru ([...prev], {...prev}) dan DILARANG mutasi langsung (push, pop, obj.key =).
+
+3. Aturan Node.js & Keamanan Backend
+
+SYSTEM RULE - NODE.JS:
+
+Wajib gunakan try/catch pada setiap operasi async/await (Database/API). Di dalam block catch, wajib merespons ke klien (misal: res.status(500)) dan me-return fungsi tersebut.
+
+DILARANG KERAS menggunakan fungsi synchronous seperti fs.readFileSync di dalam route/controller. Wajib gunakan versi async (fs.promises).
+
+Selalu tambahkan return saat memanggil res.json(), res.send(), atau next() agar tidak terjadi error "Cannot set headers".
+
+Jangan pernah menaruh secret key atau kredensial di dalam kode. Wajib gunakan process.env.
+
+Saat melakukan query ke Database untuk mengambil List (Daftar), WAJIB terapkan Pagination (limit & offset) secara default.
+
+4. Aturan TypeScript (Mengadaptasi dari Prompt Anda)
+
+SYSTEM RULE - TYPESCRIPT:
+
+NO as any, as unknown as, atau @ts-ignore dalam kondisi apapun.
+
+WAJIB definisikan interface/type untuk shape yang belum jelas sebelum memanipulasi data.
+
+Gunakan type guards atau narrowing untuk runtime check.
+
+Prefer satisfies daripada as untuk validasi.
+
+Jika data dari external source, wajib pakai validation library (seperti Zod).
+
+BAGIAN 2: Strategi TDD "Anti-Kecurangan AI"
+
+Karena kamu tidak mengecek kode, AI akan mencari jalan pintas untuk membuat warna test menjadi hijau (TDD Cheating). Atasi dengan cara ini:
+
+1. Gunakan Input Acak (Randomized Inputs)
+
+Jangan gunakan angka atau string statis dalam test.
+
+Salah (Bisa diakali AI): expect(tambah(2, 3)).toBe(5) -> AI akan menulis return 5;
+
+Benar:
+
+const a = Math.floor(Math.random() * 100);
+const b = Math.floor(Math.random() * 100);
+expect(tambah(a, b)).toBe(a + b);
+
+
+-> AI terpaksa menulis algoritma return a + b; yang sebenarnya.
+
+2. Terapkan "Negative Testing" (Test Skenario Gagal)
+
+Jangan hanya mengetes happy path. Wajibkan TDD untuk mengetes ketika data kosong, jaringan putus, atau input salah.
+
+Buat test di mana fungsi database di-mock untuk gagal (melemparkan error).
+
+Pastikan test mengecek apakah AI merespons dengan HTTP Status 500 (untuk Backend) atau menampilkan Error Boundary/State (untuk Frontend).
+
+Ini memaksa AI untuk selalu menulis blok try/catch dan error handling.
+
+3. Batasi Penggunaan Mocking Secara Ekstrem
+
+Jika kamu terlalu banyak meniru (mock) behavior dalam test, AI akan membuat kode yang hanya berjalan di lingkungan test tersebut.
+
+Untuk backend, sebisa mungkin gunakan In-Memory Database (seperti SQLite in-memory atau MongoDB Memory Server) untuk testing integrasi, daripada menguji dengan me-mocking query Mongoose/Prisma.
+
+BAGIAN 3: SDLC & Alur Kerja Vibe Coding
+
+1. Pola "Tanya Dulu, Baru Coding" (Chain of Thought)
+
+Jangan langsung menyuruh AI ngoding. Paksa AI merencanakan sebelum menulis.
+
+Prompt Vibe Coding: "Sebelum menulis kode, sebutkan file apa saja yang akan terpengaruh, variabel state apa yang akan berubah, dan jelaskan potensinya merusak fitur eksisting. Jika sudah saya setujui, baru tulis kodenya."
+
+2. Prinsip "Satu Tugas, Satu Chat" (Isolasi Konteks)
+
+AI sering kehabisan memori (context window) yang memicu Silent Regression (menghapus kode lama).
+
+Jangan menyuruh AI melakukan 3 fitur sekaligus dalam satu prompt. Pecah menjadi tugas-tugas kecil. Setelah satu fitur selesai dan TDD hijau, jika ingin lanjut ke fitur kompleks lainnya, pertimbangkan untuk memulai sesi chat baru dengan menempelkan kode terakhir yang sudah bersih.
